@@ -17,3 +17,8 @@ opt-level = 3
 bevy = { version = "0.16.1" }
 bevy_embedded_assets = "0.13"
 bevy_asset_loader = "0.23"
+lightyear = {version = "0.23.0", features = ["interpolation",
+  "prediction",
+  "replication",
+  "input_native",]}
+serde = "1.0.219"
