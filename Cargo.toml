@@ -1,0 +1,19 @@
+[package]
+name = "bevy_project_template" # TODO: change the name of the project
+version = "0.1.0"
+edition = "2024"
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = { version = "0.16.1" }
+bevy_embedded_assets = "0.13"
+bevy_asset_loader = "0.23"
