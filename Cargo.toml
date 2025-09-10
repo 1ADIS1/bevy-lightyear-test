@@ -3,6 +3,10 @@ name = "bevy_project_template" # TODO: change the name of the project
 version = "0.1.0"
 edition = "2024"
 
+[lints.clippy]
+# Queries may access many components, which would undesirably trigger this lint.
+type_complexity = "allow"
+
 # Enable a small amount of optimization in debug mode
 [profile.dev]
 opt-level = 1
@@ -17,8 +21,16 @@ opt-level = 3
 bevy = { version = "0.16.1" }
 bevy_embedded_assets = "0.13"
 bevy_asset_loader = "0.23"
-lightyear = {version = "0.23.0", features = ["interpolation",
+lightyear = { version = "0.23.0", features = [
+  "client",
+  "server",
+  "netcode",
+  "udp",
+  "interpolation",
   "prediction",
   "replication",
-  "input_native",]}
+  "input_native",
+] }
 serde = "1.0.219"
+clap = { version = "4.5.47", features = ["derive"] }
+cfg-if = "1.0.3"
