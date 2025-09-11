@@ -1,4 +1,6 @@
 mod client;
+mod editor;
+mod protocol;
 mod server;
 mod shared;
 
@@ -9,7 +11,9 @@ use clap::{Parser, Subcommand};
 use lightyear::prelude::{client::ClientPlugins, server::ServerPlugins};
 
 use crate::{
-    client::{MyClientPlugin, Player},
+    client::{ClientId, MyClientPlugin},
+    editor::EditorPlugin,
+    protocol::ProtocolPlugin,
     server::MyServerPlugin,
     shared::{FIXED_TIMESTEP_HZ, SharedPlugin},
 };
@@ -26,7 +30,7 @@ pub struct Cli {
 pub enum Mode {
     Client {
         #[arg(short, long, default_value_t = 0)]
-        id: usize,
+        id: u64,
         #[arg(short, long, default_value_t = 4000)]
         port: u16,
     },
@@ -36,22 +40,38 @@ pub enum Mode {
 fn main() {
     let cli = Cli::parse();
     let mut app = App::new();
+    let resolution = (640., 480.).into();
 
     match cli.mode {
-        Mode::Client { id, port } => {
+        Mode::Client { id, port: _ } => {
             app.add_plugins((
-                DefaultPlugins,
+                DefaultPlugins.set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: String::from("Client"),
+                        resolution,
+                        ..default()
+                    }),
+                    ..default()
+                }),
                 ClientPlugins {
                     tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
                 },
                 MyClientPlugin,
             ));
 
-            app.world_mut().spawn(Player { id, port });
+            app.world_mut().spawn(ClientId(id));
         }
         Mode::Server => {
+            // TODO: just minimal plugins?
             app.add_plugins((
-                MinimalPlugins,
+                DefaultPlugins.set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: String::from("Server"),
+                        resolution,
+                        ..default()
+                    }),
+                    ..default()
+                }),
                 ServerPlugins {
                     tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
                 },
@@ -60,7 +80,12 @@ fn main() {
         }
     }
 
-    app.add_plugins(SharedPlugin);
+    app.add_plugins((SharedPlugin, ProtocolPlugin, EditorPlugin))
+        .add_systems(Startup, spawn_camera);
 
     app.run();
+}
+
+fn spawn_camera(mut commands: Commands) {
+    commands.spawn(Camera2d);
 }

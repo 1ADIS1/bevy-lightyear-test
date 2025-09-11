@@ -6,6 +6,9 @@ use core::time::Duration;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::client::PlayerPosition;
+use crate::protocol::Direction;
+
 pub const FIXED_TIMESTEP_HZ: f64 = 64.0;
 
 pub const SERVER_REPLICATION_INTERVAL: Duration = Duration::from_millis(100);
@@ -32,4 +35,27 @@ impl Plugin for SharedPlugin {
         })
         .add_direction(NetworkDirection::Bidirectional);
     }
+}
+
+pub fn move_player(player: (&mut Transform, &mut PlayerPosition, &Direction), delta: f32) {
+    let mut direction = Vec2::ZERO;
+
+    if player.2.up {
+        direction.y = 1.;
+    }
+    if player.2.down {
+        direction.y = -1.;
+    }
+    if player.2.right {
+        direction.x = 1.;
+    }
+    if player.2.left {
+        direction.x = -1.;
+    }
+
+    direction = direction.normalize_or_zero();
+
+    player.0.translation += direction.extend(0.) * 225. * delta;
+
+    player.1.0 = player.0.translation.xy();
 }
