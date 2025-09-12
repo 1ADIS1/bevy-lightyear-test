@@ -11,9 +11,9 @@ use clap::{Parser, Subcommand};
 use lightyear::prelude::{client::ClientPlugins, server::ServerPlugins};
 
 use crate::{
-    client::{ClientId, MyClientPlugin},
+    client::MyClientPlugin,
     editor::EditorPlugin,
-    protocol::ProtocolPlugin,
+    protocol::{ClientId, ProtocolPlugin},
     server::MyServerPlugin,
     shared::{FIXED_TIMESTEP_HZ, SharedPlugin},
 };

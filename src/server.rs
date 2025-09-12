@@ -2,15 +2,14 @@ use bevy::prelude::*;
 use lightyear::{
     netcode::NetcodeServer,
     prelude::{
-        input::native::{ActionState, InputMarker},
+        input::native::ActionState,
         server::{ClientOf, NetcodeConfig, ServerUdpIo, Start},
         *,
     },
 };
 
 use crate::{
-    client::{Player, PlayerPosition},
-    protocol::Direction,
+    protocol::{Direction, Player},
     shared::{SERVER_ADDR, SERVER_REPLICATION_INTERVAL},
 };
 
@@ -29,6 +28,7 @@ impl Plugin for MyServerPlugin {
 fn startup(mut commands: Commands) -> Result {
     let server = commands
         .spawn((
+            Name::new("Server"),
             NetcodeServer::new(NetcodeConfig::default()),
             LocalAddr(SERVER_ADDR),
             ServerUdpIo::default(),
@@ -65,6 +65,7 @@ pub(crate) fn handle_connected(
 
     let entity = commands
         .spawn((
+            Name::new("Player"),
             Player,
             Sprite {
                 image: asset_server.load("art/ball.png"),
@@ -72,7 +73,11 @@ pub(crate) fn handle_connected(
             },
             // we replicate the Player entity to all clients that are connected to this server
             Replicate::to_clients(NetworkTarget::All),
+            // Mark client that will predict the entity.
             PredictionTarget::to_clients(NetworkTarget::Single(client_id)),
+            // Perform interpolation on all other players except this one
+            // because it is controlled on the client.
+            InterpolationTarget::to_clients(NetworkTarget::AllExceptSingle(client_id)),
             ControlledBy {
                 owner: trigger.target(),
                 lifetime: Default::default(),
@@ -88,13 +93,10 @@ pub(crate) fn handle_connected(
 
 /// Read client inputs and move players in server therefore giving a basis for other clients
 pub fn handle_player_movement(
-    mut position_query: Query<(&mut Transform, &mut PlayerPosition, &ActionState<Direction>)>,
+    mut position_query: Query<(&mut Transform, &ActionState<Direction>)>,
     time: Res<Time>,
 ) {
-    for (mut transform, mut position, inputs) in position_query.iter_mut() {
-        crate::shared::move_player(
-            (&mut transform, &mut position, &inputs.0),
-            time.delta_secs(),
-        );
+    for (mut transform, inputs) in position_query.iter_mut() {
+        crate::shared::move_player((&mut transform, &inputs.0), time.delta_secs());
     }
 }
