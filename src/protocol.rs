@@ -1,4 +1,5 @@
 use bevy::{ecs::entity::MapEntities, prelude::*};
+use leafwing_input_manager::prelude::*;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -9,9 +10,16 @@ pub struct ProtocolPlugin;
 
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<Direction>();
+        app.register_type::<PlayerAction>();
 
-        app.add_plugins(lightyear::input::native::plugin::InputPlugin::<Direction>::default());
+        app.add_plugins(input::leafwing::InputPlugin::<PlayerAction> {
+            config: input::InputConfig::<PlayerAction> {
+                // enable lag compensation; the input messages sent to the server will include the
+                // interpolation delay of that client
+                lag_compensation: true,
+                ..default()
+            },
+        });
 
         app.register_component::<Transform>()
             .add_prediction(PredictionMode::Full)
@@ -41,18 +49,19 @@ pub struct Player;
 pub struct ClientId(pub u64);
 
 /// The different directions that the player can move the box
-#[derive(Default, Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Reflect)]
-pub struct Direction {
-    pub(crate) up: bool,
-    pub(crate) down: bool,
-    pub(crate) left: bool,
-    pub(crate) right: bool,
+#[derive(Actionlike, Hash, Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Reflect)]
+pub enum PlayerAction {
+    Up,
+    Down,
+    Left,
+    Right,
+    Shoot,
 }
 
 // All inputs need to implement the `MapEntities` trait
-impl MapEntities for Direction {
-    fn map_entities<M: EntityMapper>(&mut self, _entity_mapper: &mut M) {}
-}
+// impl MapEntities for PlayerAction {
+//     fn map_entities<M: EntityMapper>(&mut self, _entity_mapper: &mut M) {}
+// }
 
 fn transform_interpolation_fn(a: Transform, b: Transform, value: f32) -> Transform {
     let mut my_transform = a;

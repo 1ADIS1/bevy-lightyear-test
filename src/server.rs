@@ -9,7 +9,7 @@ use lightyear::{
 };
 
 use crate::{
-    protocol::{Direction, Player},
+    protocol::{PlayerAction, Player},
     shared::{SERVER_ADDR, SERVER_REPLICATION_INTERVAL},
 };
 
@@ -93,7 +93,7 @@ pub(crate) fn handle_connected(
 
 /// Read client inputs and move players in server therefore giving a basis for other clients
 pub fn handle_player_movement(
-    mut position_query: Query<(&mut Transform, &ActionState<Direction>)>,
+    mut position_query: Query<(&mut Transform, &ActionState<PlayerAction>)>,
     time: Res<Time>,
 ) {
     for (mut transform, inputs) in position_query.iter_mut() {

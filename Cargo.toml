@@ -22,16 +22,14 @@ bevy = { version = "0.16.1", features = ["serialize"] }
 bevy_embedded_assets = "0.13"
 bevy_asset_loader = "0.23"
 lightyear = { version = "0.23.0", features = [
-  "client",
-  "server",
   "netcode",
   "udp",
-  "interpolation",
-  "prediction",
-  "replication",
   "input_native",
+  "leafwing",
 ] }
 serde = "1.0.219"
 clap = { version = "4.5.47", features = ["derive"] }
 bevy-inspector-egui = "=0.31"
 egui_dock = "0.16" # Support for docking windows.
+avian2d = "0.3.1"
+leafwing-input-manager = "0.17.0"

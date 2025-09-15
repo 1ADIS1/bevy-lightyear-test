@@ -6,6 +6,7 @@ mod shared;
 
 use std::time::Duration;
 
+use avian2d::{PhysicsPlugins, prelude::PhysicsDebugPlugin};
 use bevy::prelude::*;
 use clap::{Parser, Subcommand};
 use lightyear::prelude::{client::ClientPlugins, server::ServerPlugins};
@@ -53,6 +54,7 @@ fn main() {
                     }),
                     ..default()
                 }),
+                PhysicsPlugins::default(),
                 ClientPlugins {
                     tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
                 },
@@ -72,6 +74,7 @@ fn main() {
                     }),
                     ..default()
                 }),
+                PhysicsPlugins::default(),
                 ServerPlugins {
                     tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
                 },
@@ -80,8 +83,14 @@ fn main() {
         }
     }
 
-    app.add_plugins((SharedPlugin, ProtocolPlugin, EditorPlugin))
-        .add_systems(Startup, spawn_camera);
+    app.add_plugins((
+        SharedPlugin,
+        ProtocolPlugin,
+        EditorPlugin,
+        PhysicsDebugPlugin::default(),
+    ));
+
+    app.add_systems(Startup, spawn_camera);
 
     app.run();
 }

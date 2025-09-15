@@ -1,5 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+use avian2d::prelude::{Collider, DebugRender};
 use bevy::prelude::*;
 use lightyear::{
     input::client::InputSet,
@@ -12,7 +13,7 @@ use lightyear::{
 };
 
 use crate::{
-    protocol::{ClientId, Direction, Player},
+    protocol::{ClientId, Player, PlayerAction},
     shared::{self, SERVER_ADDR},
 };
 
@@ -20,19 +21,22 @@ pub struct MyClientPlugin;
 
 impl Plugin for MyClientPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (setup,)).add_systems(
+        app.add_systems(Update, (setup, shoot)).add_systems(
             FixedPreUpdate,
             // Inputs have to be buffered in the WriteClientInputs set
             buffer_input.in_set(InputSet::WriteClientInputs),
         );
 
-        app.add_systems(FixedUpdate, player_movement);
+        app.add_systems(FixedUpdate, (player_movement, move_bullet));
 
-        app.add_observer(on_player_connect);
+        app.add_observer(on_predicted_player_connect);
 
-        app.add_observer(on_other_player_interpolate);
+        app.add_observer(on_interpolated_player_spawn);
     }
 }
+
+#[derive(Component)]
+pub struct Bullet;
 
 fn setup(mut commands: Commands, client_added_q: Query<(Entity, &ClientId), Added<ClientId>>) {
     for (client_entity, client_id) in client_added_q.iter() {
@@ -63,11 +67,11 @@ fn setup(mut commands: Commands, client_added_q: Query<(Entity, &ClientId), Adde
 }
 
 pub(crate) fn buffer_input(
-    mut query: Query<&mut ActionState<Direction>, With<InputMarker<Direction>>>,
+    mut query: Query<&mut ActionState<PlayerAction>, With<InputMarker<PlayerAction>>>,
     keypress: Res<ButtonInput<KeyCode>>,
 ) {
     if let Ok(mut action_state) = query.single_mut() {
-        let mut direction = Direction {
+        let mut direction = PlayerAction {
             up: false,
             down: false,
             left: false,
@@ -99,7 +103,7 @@ pub(crate) fn buffer_input(
 /// If we were predicting more entities, we would have to only apply movement to the player owned one.
 fn player_movement(
     // timeline: Single<&LocalTimeline>,
-    mut position_query: Query<(&mut Transform, &ActionState<Direction>), With<Predicted>>,
+    mut position_query: Query<(&mut Transform, &ActionState<PlayerAction>), With<Predicted>>,
     time: Res<Time>,
 ) {
     // let tick = timeline.tick();
@@ -111,9 +115,12 @@ fn player_movement(
     }
 }
 
+/// Predicted - is our player.
+///
 /// We should manipulate only a predicted copy of the player.
+///
 /// NOTE: this is called twice
-fn on_player_connect(
+fn on_predicted_player_connect(
     trigger: Trigger<OnAdd, (Player, Predicted)>,
     player_q: Query<Entity, With<Predicted>>,
     mut commands: Commands,
@@ -128,15 +135,16 @@ fn on_player_connect(
             image: asset_server.load("art/ball.png"),
             ..default()
         },
-        InputMarker::<Direction>::default(),
+        InputMarker::<PlayerAction>::default(),
     ));
 
-    warn!("Player predicted!");
+    warn!("Predicted player spawned!");
 }
 
-/// Change other interpolated players.
+/// Interpolated - are other players.
+///
 /// These players positions are smoothly interpolated, so that is why we should be displaying only them.
-fn on_other_player_interpolate(
+fn on_interpolated_player_spawn(
     trigger: Trigger<OnAdd, Player>,
     player_q: Query<Entity, With<Interpolated>>,
     mut commands: Commands,
@@ -151,5 +159,42 @@ fn on_other_player_interpolate(
         ..default()
     },));
 
-    warn!("Player replicated!");
+    warn!("Interpolated player spawned!");
+}
+
+fn shoot(
+    mut commands: Commands,
+    mouse: Res<ButtonInput<MouseButton>>,
+    player_q: Query<&Transform, (With<Predicted>, With<Player>)>,
+    asset_server: Res<AssetServer>,
+) {
+    let Ok(player_transform) = player_q.single() else {
+        return;
+    };
+
+    if !mouse.just_pressed(MouseButton::Left) {
+        return;
+    }
+
+    commands.spawn((
+        Name::new("Bullet"),
+        Bullet,
+        Collider::circle(50.),
+        DebugRender::default().with_collider_color(Color::srgb(1.0, 0.0, 0.0)),
+        Sprite {
+            image: asset_server.load("art/ball.png"),
+            ..default()
+        },
+        Transform {
+            translation: player_transform.translation,
+            scale: Vec3::splat(0.1),
+            ..default()
+        },
+    ));
+}
+
+fn move_bullet(mut bullet_q: Query<&mut Transform, With<Bullet>>, time: Res<Time>) {
+    for mut transform in bullet_q.iter_mut() {
+        transform.translation.x += 10. * time.delta_secs();
+    }
 }

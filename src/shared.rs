@@ -6,7 +6,7 @@ use core::time::Duration;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::protocol::Direction;
+use crate::protocol::PlayerAction;
 
 pub const FIXED_TIMESTEP_HZ: f64 = 64.0;
 
@@ -36,7 +36,7 @@ impl Plugin for SharedPlugin {
     }
 }
 
-pub fn move_player(player: (&mut Transform, &Direction), delta: f32) {
+pub fn move_player(player: (&mut Transform, &PlayerAction), delta: f32) {
     let mut direction = Vec2::ZERO;
 
     if player.1.up {
