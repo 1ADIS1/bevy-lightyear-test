@@ -1,4 +1,5 @@
-use bevy::{ecs::entity::MapEntities, prelude::*};
+use avian2d::prelude::RigidBody;
+use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,7 @@ pub struct ProtocolPlugin;
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<PlayerAction>();
+        app.register_type::<PlayerId>();
 
         app.add_plugins(input::leafwing::InputPlugin::<PlayerAction> {
             config: input::InputConfig::<PlayerAction> {
@@ -30,7 +32,18 @@ impl Plugin for ProtocolPlugin {
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 
+        app.register_component::<PlayerId>()
+            .add_prediction(PredictionMode::Once)
+            .add_interpolation(InterpolationMode::Once);
+
         app.register_component::<Name>()
+            .add_prediction(PredictionMode::Once)
+            .add_interpolation(InterpolationMode::Once);
+
+        app.register_component::<RigidBody>()
+            .add_prediction(PredictionMode::Once);
+
+        app.register_component::<Bullet>()
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 
@@ -42,11 +55,22 @@ impl Plugin for ProtocolPlugin {
     }
 }
 
+/// TODO: Remove this. Used just to give argument to client from CLI.
+/// Inserted when CLI is parsed.
+#[derive(Component)]
+pub struct CliClientOptions {
+    pub id: u64,
+}
+
+#[derive(Component, Serialize, Deserialize, Debug, Reflect, PartialEq, Clone)]
+pub struct Bullet;
+
 #[derive(Component, Serialize, Deserialize, Debug, Default, Reflect, PartialEq, Clone)]
 pub struct Player;
 
-#[derive(Component)]
-pub struct ClientId(pub u64);
+/// Just a helper component for easy access of client id.
+#[derive(Component, Serialize, Deserialize, Debug, Reflect, PartialEq, Clone)]
+pub struct PlayerId(pub PeerId);
 
 /// The different directions that the player can move the box
 #[derive(Actionlike, Hash, Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Reflect)]
@@ -57,11 +81,6 @@ pub enum PlayerAction {
     Right,
     Shoot,
 }
-
-// All inputs need to implement the `MapEntities` trait
-// impl MapEntities for PlayerAction {
-//     fn map_entities<M: EntityMapper>(&mut self, _entity_mapper: &mut M) {}
-// }
 
 fn transform_interpolation_fn(a: Transform, b: Transform, value: f32) -> Transform {
     let mut my_transform = a;

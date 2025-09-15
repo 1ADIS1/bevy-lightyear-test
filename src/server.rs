@@ -2,14 +2,13 @@ use bevy::prelude::*;
 use lightyear::{
     netcode::NetcodeServer,
     prelude::{
-        input::native::ActionState,
         server::{ClientOf, NetcodeConfig, ServerUdpIo, Start},
         *,
     },
 };
 
 use crate::{
-    protocol::{PlayerAction, Player},
+    protocol::{Player, PlayerAction, PlayerId},
     shared::{SERVER_ADDR, SERVER_REPLICATION_INTERVAL},
 };
 
@@ -53,11 +52,12 @@ pub(crate) fn handle_new_client(trigger: Trigger<OnAdd, LinkOf>, mut commands: C
 
 pub(crate) fn handle_connected(
     trigger: Trigger<OnAdd, Connected>,
-    query: Query<&RemoteId, With<ClientOf>>,
+    client_q: Query<&RemoteId, With<ClientOf>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let Ok(client_id) = query.get(trigger.target()) else {
+    // Fin id of connected client
+    let Ok(client_id) = client_q.get(trigger.target()) else {
         return;
     };
 
@@ -67,6 +67,7 @@ pub(crate) fn handle_connected(
         .spawn((
             Name::new("Player"),
             Player,
+            PlayerId(client_id),
             Sprite {
                 image: asset_server.load("art/ball.png"),
                 ..default()
@@ -93,10 +94,13 @@ pub(crate) fn handle_connected(
 
 /// Read client inputs and move players in server therefore giving a basis for other clients
 pub fn handle_player_movement(
-    mut position_query: Query<(&mut Transform, &ActionState<PlayerAction>)>,
+    mut position_query: Query<(
+        &mut Transform,
+        &leafwing_input_manager::prelude::ActionState<PlayerAction>,
+    )>,
     time: Res<Time>,
 ) {
     for (mut transform, inputs) in position_query.iter_mut() {
-        crate::shared::move_player((&mut transform, &inputs.0), time.delta_secs());
+        crate::shared::move_player(&mut transform, inputs, time.delta_secs());
     }
 }

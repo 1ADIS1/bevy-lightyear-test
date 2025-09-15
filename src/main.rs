@@ -14,7 +14,7 @@ use lightyear::prelude::{client::ClientPlugins, server::ServerPlugins};
 use crate::{
     client::MyClientPlugin,
     editor::EditorPlugin,
-    protocol::{ClientId, ProtocolPlugin},
+    protocol::{CliClientOptions, ProtocolPlugin},
     server::MyServerPlugin,
     shared::{FIXED_TIMESTEP_HZ, SharedPlugin},
 };
@@ -61,7 +61,7 @@ fn main() {
                 MyClientPlugin,
             ));
 
-            app.world_mut().spawn(ClientId(id));
+            app.world_mut().spawn(CliClientOptions { id });
         }
         Mode::Server => {
             // TODO: just minimal plugins?
