@@ -54,7 +54,6 @@ fn main() {
                     }),
                     ..default()
                 }),
-                PhysicsPlugins::default(),
                 ClientPlugins {
                     tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
                 },
@@ -74,7 +73,6 @@ fn main() {
                     }),
                     ..default()
                 }),
-                PhysicsPlugins::default(),
                 ServerPlugins {
                     tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
                 },
@@ -83,12 +81,18 @@ fn main() {
         }
     }
 
+    // both client and server need physics
+    // (the client also needs the physics plugin to be able to compute predicted bullet hits)
     app.add_plugins((
-        SharedPlugin,
-        ProtocolPlugin,
-        EditorPlugin,
+        PhysicsPlugins::default()
+            .build()
+            // disable Sync as it is handled by lightyear_avian
+            .disable::<avian2d::sync::SyncPlugin>(),
         PhysicsDebugPlugin::default(),
-    ));
+    ))
+    .insert_resource(avian2d::prelude::Gravity(Vec2::ZERO));
+
+    app.add_plugins((SharedPlugin, ProtocolPlugin, EditorPlugin));
 
     app.add_systems(Startup, spawn_camera);
 

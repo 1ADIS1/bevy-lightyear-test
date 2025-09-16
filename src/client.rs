@@ -86,7 +86,7 @@ fn player_movement(
 /// NOTE: this is called twice
 fn on_predicted_player_connect(
     trigger: Trigger<OnAdd, (Player, Predicted)>,
-    player_q: Query<Entity, With<Predicted>>,
+    player_q: Query<Entity, (With<Predicted>, With<Player>)>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
@@ -119,7 +119,7 @@ fn on_predicted_player_connect(
 /// These players positions are smoothly interpolated, so that is why we should be displaying only them.
 fn on_interpolated_player_spawn(
     trigger: Trigger<OnAdd, Player>,
-    player_q: Query<Entity, With<Interpolated>>,
+    player_q: Query<Entity, (With<Interpolated>, With<Player>)>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {

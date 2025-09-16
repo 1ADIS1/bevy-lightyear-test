@@ -11,8 +11,7 @@ pub struct ProtocolPlugin;
 
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<PlayerAction>();
-        app.register_type::<PlayerId>();
+        app.register_type::<(PlayerAction, PlayerId)>();
 
         app.add_plugins(input::leafwing::InputPlugin::<PlayerAction> {
             config: input::InputConfig::<PlayerAction> {
@@ -69,7 +68,7 @@ pub struct Bullet;
 pub struct Player;
 
 /// Just a helper component for easy access of client id.
-#[derive(Component, Serialize, Deserialize, Debug, Reflect, PartialEq, Clone)]
+#[derive(Component, Serialize, Deserialize, Debug, Reflect, PartialEq, Clone, Copy)]
 pub struct PlayerId(pub PeerId);
 
 /// The different directions that the player can move the box

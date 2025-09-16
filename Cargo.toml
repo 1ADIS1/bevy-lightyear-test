@@ -28,6 +28,10 @@ lightyear = { version = "0.23.0", features = [
   "leafwing",
   "avian2d",
 ] }
+lightyear_avian2d = { version = "=0.23.0", features = [
+  "2d",
+  "lag_compensation",
+] }
 serde = "1.0.219"
 clap = { version = "4.5.47", features = ["derive"] }
 bevy-inspector-egui = "=0.31"

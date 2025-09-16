@@ -16,6 +16,8 @@ pub struct MyServerPlugin;
 
 impl Plugin for MyServerPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(lightyear_avian2d::prelude::LagCompensationPlugin);
+
         app.add_observer(handle_new_client)
             .add_observer(handle_connected)
             .add_systems(Startup, startup)
