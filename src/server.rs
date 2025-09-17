@@ -20,7 +20,7 @@ impl Plugin for MyServerPlugin {
 
         app.add_observer(handle_new_client)
             .add_observer(handle_connected)
-            .add_systems(Startup, startup)
+            .add_systems(Startup, (startup, spawn_server_authoritative_entities))
             .add_systems(FixedUpdate, handle_player_movement);
     }
 }
@@ -39,6 +39,17 @@ fn startup(mut commands: Commands) -> Result {
     commands.trigger_targets(Start, server);
 
     Ok(())
+}
+
+fn spawn_server_authoritative_entities(mut commands: Commands) {
+    // Spawn server-authoritative ball
+    commands.spawn((
+        crate::protocol::Ball,
+        crate::protocol::Ball::get_physics_bundle(),
+        Name::from("Ball"),
+        Replicate::to_clients(NetworkTarget::All),
+        PredictionTarget::to_clients(NetworkTarget::All),
+    ));
 }
 
 pub(crate) fn handle_new_client(trigger: Trigger<OnAdd, LinkOf>, mut commands: Commands) {
@@ -69,6 +80,7 @@ pub(crate) fn handle_connected(
         .spawn((
             Name::new("Player"),
             Player,
+            Player::get_physics_bundle(),
             PlayerId(client_id),
             Sprite {
                 image: asset_server.load("art/ball.png"),
@@ -97,12 +109,11 @@ pub(crate) fn handle_connected(
 /// Read client inputs and move players in server therefore giving a basis for other clients
 pub fn handle_player_movement(
     mut position_query: Query<(
-        &mut Transform,
+        &mut avian2d::prelude::LinearVelocity,
         &leafwing_input_manager::prelude::ActionState<PlayerAction>,
     )>,
-    time: Res<Time>,
 ) {
-    for (mut transform, inputs) in position_query.iter_mut() {
-        crate::shared::move_player(&mut transform, inputs, time.delta_secs());
+    for (mut velocity, inputs) in position_query.iter_mut() {
+        crate::shared::move_player(&mut velocity, inputs);
     }
 }

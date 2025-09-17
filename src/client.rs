@@ -22,6 +22,8 @@ impl Plugin for MyClientPlugin {
         app.add_observer(on_predicted_player_connect);
 
         app.add_observer(on_interpolated_player_spawn);
+
+        app.add_observer(add_ball_physics);
     }
 }
 
@@ -56,6 +58,27 @@ fn setup(
     }
 }
 
+/// Blueprint pattern: when the ball gets replicated from the server, add all the components
+/// that we need that are not replicated.
+/// (for example physical properties that are constant, so they don't need to be networked)
+///
+/// We only add the physical properties on the ball that is displayed on screen (i.e the Predicted ball)
+/// We want the ball to be rigid so that when players collide with it, they bounce off.
+///
+/// However we remove the Position because we want the balls position to be interpolated, without being computed/updated
+/// by the physics engine? Actually this shouldn't matter because we run interpolation in PostUpdate...
+fn add_ball_physics(
+    trigger: Trigger<OnAdd, crate::protocol::Ball>,
+    mut commands: Commands,
+    ball_query: Query<(), With<Predicted>>,
+) {
+    if let Ok(()) = ball_query.get(trigger.target()) {
+        commands
+            .entity(trigger.target())
+            .insert(crate::protocol::Ball::get_physics_bundle());
+    }
+}
+
 /// The client input only gets applied to predicted entities that we own
 /// This works because we only predict the user's controlled entity.
 /// If we were predicting more entities, we would have to only apply movement to the player owned one.
@@ -63,26 +86,24 @@ fn player_movement(
     // timeline: Single<&LocalTimeline>,
     mut position_query: Query<
         (
-            &mut Transform,
+            &mut avian2d::prelude::LinearVelocity,
             &leafwing_input_manager::prelude::ActionState<PlayerAction>,
         ),
         With<Predicted>,
     >,
-    time: Res<Time>,
 ) {
     // let tick = timeline.tick();
-    for (mut transform, input) in position_query.iter_mut() {
+    for (mut velocity, input) in position_query.iter_mut() {
         // trace!(?tick, ?position, ?input, "client");
         // NOTE: be careful to directly pass Mut<PlayerPosition>
         // getting a mutable reference triggers change detection, unless you use `as_deref_mut()`
-        shared::move_player(&mut transform, input, time.delta_secs());
+        shared::move_player(&mut velocity, input);
     }
 }
 
 /// Predicted - is our player.
 ///
 /// We should manipulate only a predicted copy of the player.
-///
 /// NOTE: this is called twice
 fn on_predicted_player_connect(
     trigger: Trigger<OnAdd, (Player, Predicted)>,
@@ -101,7 +122,7 @@ fn on_predicted_player_connect(
         (PlayerAction::Left, KeyCode::KeyA),
     ]);
 
-    input_map.insert(PlayerAction::Shoot, MouseButton::Left);
+    input_map.insert(PlayerAction::Shoot, KeyCode::Space);
 
     commands.entity(trigger.target()).insert((
         Sprite {
@@ -109,6 +130,7 @@ fn on_predicted_player_connect(
             ..default()
         },
         input_map,
+        Player::get_physics_bundle(),
     ));
 
     warn!("Predicted player spawned!");
@@ -127,10 +149,13 @@ fn on_interpolated_player_spawn(
         return;
     }
 
-    commands.entity(trigger.target()).insert((Sprite {
-        image: asset_server.load("art/ball.png"),
-        ..default()
-    },));
+    commands.entity(trigger.target()).insert((
+        Sprite {
+            image: asset_server.load("art/ball.png"),
+            ..default()
+        },
+        Player::get_physics_bundle(),
+    ));
 
     warn!("Interpolated player spawned!");
 }
