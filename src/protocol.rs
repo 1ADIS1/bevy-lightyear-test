@@ -1,7 +1,11 @@
-use avian2d::prelude::{AngularVelocity, Collider, ColliderDensity, LinearVelocity, RigidBody};
+use avian2d::prelude::{
+    AngularVelocity, Collider, ColliderDensity, ComputedMass, ExternalForce, ExternalImpulse,
+    LinearVelocity, Position, RigidBody, Rotation,
+};
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 use lightyear::prelude::*;
+use lightyear_frame_interpolation::{FrameInterpolate, FrameInterpolationPlugin};
 use serde::{Deserialize, Serialize};
 
 pub struct ProtocolPlugin;
@@ -15,6 +19,7 @@ impl Plugin for ProtocolPlugin {
                 // enable lag compensation; the input messages sent to the server will include the
                 // interpolation delay of that client
                 lag_compensation: true,
+                rebroadcast_inputs: true,
                 ..default()
             },
         });
@@ -61,6 +66,7 @@ impl Plugin for ProtocolPlugin {
             .add_linear_interpolation_fn()
             .add_linear_correction_fn();
 
+        // Fully replicated, but not visual, so no need for lerp/corrections:
         // NOTE: interpolation/correction is only needed for components that are visually displayed!
         // we still need prediction to be able to correctly predict the physics on the client
         app.register_component::<LinearVelocity>()
@@ -68,6 +74,24 @@ impl Plugin for ProtocolPlugin {
 
         app.register_component::<AngularVelocity>()
             .add_prediction(PredictionMode::Full);
+
+        app.register_component::<ExternalForce>()
+            .add_prediction(PredictionMode::Full);
+
+        app.register_component::<ExternalImpulse>()
+            .add_prediction(PredictionMode::Full);
+
+        app.register_component::<ComputedMass>()
+            .add_prediction(PredictionMode::Full);
+
+        // Set up visual interp plugins for Position/Rotation. Position/Rotation is updated in FixedUpdate
+        // by the physics plugin so we make sure that in PostUpdate we interpolate it
+        app.add_plugins(FrameInterpolationPlugin::<avian2d::prelude::Position>::default());
+        app.add_plugins(FrameInterpolationPlugin::<avian2d::prelude::Rotation>::default());
+
+        // Observers that add VisualInterpolationStatus components to entities
+        // which receive a Position and are predicted
+        app.add_observer(add_visual_interpolation_components);
 
         // do not replicate Transform but make sure to register an interpolation function
         // for it so that we can do visual interpolation
@@ -132,16 +156,6 @@ pub enum PlayerAction {
     Shoot,
 }
 
-fn transform_interpolation_fn(a: Transform, b: Transform, value: f32) -> Transform {
-    let mut my_transform = a;
-
-    my_transform.translation = a.translation.lerp(b.translation, value);
-    my_transform.rotation = my_transform.rotation.lerp(b.rotation, value);
-    my_transform.scale = my_transform.scale.lerp(b.scale, value);
-
-    my_transform
-}
-
 fn position_should_rollback(
     this: &avian2d::prelude::Position,
     that: &avian2d::prelude::Position,
@@ -154,4 +168,40 @@ fn rotation_should_rollback(
     that: &avian2d::prelude::Rotation,
 ) -> bool {
     this.angle_between(*that) >= 0.01
+}
+
+/// Add the VisualInterpolateStatus::<Transform> component to non-floor entities with
+/// component `Position`. Floors don't need to be visually interpolated because we
+/// don't expect them to move.
+///
+/// We query Without<Confirmed> instead of With<Predicted> so that the server's
+/// gui will also get some visual interpolation. But we're usually just
+/// concerned that the client's Predicted entities get the interpolation
+/// treatment.
+fn add_visual_interpolation_components(
+    // We use Position because it's added by avian later, and when it's added
+    // we know that Predicted is already present on the entity
+    trigger: Trigger<OnAdd, Position>,
+    query: Query<Entity, With<Predicted>>,
+    mut commands: Commands,
+) {
+    if !query.contains(trigger.target()) {
+        return;
+    }
+    commands.entity(trigger.target()).insert((
+        FrameInterpolate::<Position> {
+            // We must trigger change detection on visual interpolation
+            // to make sure that child entities (sprites, meshes, text)
+            // are also interpolated
+            trigger_change_detection: true,
+            ..default()
+        },
+        FrameInterpolate::<Rotation> {
+            // We must trigger change detection on visual interpolation
+            // to make sure that child entities (sprites, meshes, text)
+            // are also interpolated
+            trigger_change_detection: true,
+            ..default()
+        },
+    ));
 }

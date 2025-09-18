@@ -1,5 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+use avian2d::prelude::{Collider, RigidBody};
 use bevy::prelude::*;
 use lightyear::{
     netcode::{Key, NetcodeClient},
@@ -101,35 +102,37 @@ fn player_movement(
     }
 }
 
-/// Predicted - is our player.
+/// There can be several predicted player. Add input only to Controlled player.
 ///
 /// We should manipulate only a predicted copy of the player.
 /// NOTE: this is called twice
 fn on_predicted_player_connect(
     trigger: Trigger<OnAdd, (Player, Predicted)>,
-    player_q: Query<Entity, (With<Predicted>, With<Player>)>,
+    player_q: Query<Option<&Controlled>, (With<Predicted>, With<Player>)>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    if player_q.get(trigger.target()).is_err() {
+    let Ok(controlled) = player_q.get(trigger.target()) else {
         return;
+    };
+
+    if controlled.is_some() {
+        let input_map = leafwing_input_manager::prelude::InputMap::new([
+            (PlayerAction::Up, KeyCode::KeyW),
+            (PlayerAction::Down, KeyCode::KeyS),
+            (PlayerAction::Right, KeyCode::KeyD),
+            (PlayerAction::Left, KeyCode::KeyA),
+        ])
+        .with(PlayerAction::Shoot, KeyCode::Space);
+
+        commands.entity(trigger.target()).insert(input_map);
     }
-
-    let mut input_map = leafwing_input_manager::prelude::InputMap::new([
-        (PlayerAction::Up, KeyCode::KeyW),
-        (PlayerAction::Down, KeyCode::KeyS),
-        (PlayerAction::Right, KeyCode::KeyD),
-        (PlayerAction::Left, KeyCode::KeyA),
-    ]);
-
-    input_map.insert(PlayerAction::Shoot, KeyCode::Space);
 
     commands.entity(trigger.target()).insert((
         Sprite {
             image: asset_server.load("art/ball.png"),
             ..default()
         },
-        input_map,
         Player::get_physics_bundle(),
     ));
 

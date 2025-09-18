@@ -21,17 +21,18 @@ opt-level = 3
 bevy = { version = "0.16.1", features = ["serialize"] }
 bevy_embedded_assets = "0.13"
 bevy_asset_loader = "0.23"
-lightyear = { version = "0.23.0", features = [
+lightyear = { version = "0.24.0", features = [
   "netcode",
   "udp",
   "input_native",
   "leafwing",
   "avian2d",
 ] }
-lightyear_avian2d = { version = "=0.23.0", features = [
+lightyear_avian2d = { version = "=0.24.2", features = [
   "2d",
   "lag_compensation",
 ] }
+lightyear_frame_interpolation = "=0.24.2"
 serde = "1.0.219"
 clap = { version = "4.5.47", features = ["derive"] }
 bevy-inspector-egui = "=0.31"

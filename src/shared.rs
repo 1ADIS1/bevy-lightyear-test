@@ -240,40 +240,41 @@ fn kinematic_controller_collisions(
                 continue;
             }
 
-            if deepest_penetration > 0.0 {
-                // The character is intersecting an unclimbable object, like a wall.
-                // We want the character to slide along the surface, similarly to
-                // a collide-and-slide algorithm.
+            // if deepest_penetration > 0.0 {
+            //     // The character is intersecting an unclimbable object, like a wall.
+            //     // We want the character to slide along the surface, similarly to
+            //     // a collide-and-slide algorithm.
 
-                // Don't apply an impulse if the character is moving away from the surface.
-                if linear_velocity.dot(normal) > 0.0 {
-                    continue;
-                }
+            //     // Don't apply an impulse if the character is moving away from the surface.
+            //     if linear_velocity.dot(normal) > 0.0 {
+            //         continue;
+            //     }
 
-                // Slide along the surface, rejecting the velocity along the contact normal.
-                let impulse = linear_velocity.reject_from_normalized(normal);
-                linear_velocity.0 = impulse;
-            } else {
-                // The character is not yet intersecting the other object,
-                // but the narrow phase detected a speculative collision.
+            //     // Slide along the surface, rejecting the velocity along the contact normal.
+            //     let impulse = linear_velocity.reject_from_normalized(normal);
+            //     linear_velocity.0 = impulse;
+            // }
+            // else {
+            // The character is not yet intersecting the other object,
+            // but the narrow phase detected a speculative collision.
 
-                // We need to push back the part of the velocity
-                // that would cause penetration within the next frame.
+            // We need to push back the part of the velocity
+            // that would cause penetration within the next frame.
 
-                let normal_speed = linear_velocity.dot(normal);
+            let normal_speed = linear_velocity.dot(normal);
 
-                // Don't apply an impulse if the character is moving away from the surface.
-                if normal_speed > 0.0 {
-                    continue;
-                }
-
-                // Compute the impulse to apply.
-                let impulse_magnitude =
-                    normal_speed - (deepest_penetration / time.delta_secs_f64().adjust_precision());
-                let impulse = impulse_magnitude * normal;
-
-                linear_velocity.0 -= impulse;
+            // Don't apply an impulse if the character is moving away from the surface or staying still.
+            if normal_speed >= 0.0 {
+                continue;
             }
+
+            // Compute the impulse to apply.
+            let impulse_magnitude =
+                normal_speed - (deepest_penetration / time.delta_secs_f64().adjust_precision());
+            let impulse = impulse_magnitude * normal;
+
+            linear_velocity.0 -= impulse;
+            // }
         }
     }
 }
